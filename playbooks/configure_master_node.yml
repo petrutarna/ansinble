@@ -1,0 +1,43 @@
+---
+- hosts: master-nodes
+  vars_files:
+  - ../env_variables
+  become: yes
+  tasks:
+  - name: Pulling images required for setting up a Kubernetes cluster
+    shell: kubeadm config images pull
+
+  - name: Resetting kubeadm
+    shell: kubeadm reset -f
+    register: output
+
+  - name: Initializing Kubernetes cluster
+    shell: kubeadm init --apiserver-advertise-address {{ad_addr}} --pod-network-cidr={{cidr_v}}
+    register: output
+
+  - name: create .kube directory
+    become: yes
+    become_user: admin_petru
+    file:
+      path: $HOME/.kube
+      state: directory
+      mode: 0755
+
+  - name: copy admin.conf to user's kube config
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/admin_petru/.kube/config
+      remote_src: yes
+      owner: admin_petru
+
+# - name: Setting 
+#   shell: |
+  #    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+  - name: install Pod network
+    become: yes
+    become_user: admin_petru
+    shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml >> pod_network_setup.txt
+    args:
+      chdir: $HOME
+      creates: pod_network_setup.txt

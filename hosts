@@ -1,0 +1,9 @@
+[master-nodes]
+kubernetes-master ansible_host=192.168.100.194 ansible_user=admin_petru
+
+[worker-nodes]
+kubernetes-worker1 ansible_host=192.168.100.249 ansible_user=admin_petru
+kubernetes-worker2 ansible_host=192.168.100.233 ansible_user=admin_petru
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3

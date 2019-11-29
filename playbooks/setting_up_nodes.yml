@@ -1,0 +1,61 @@
+---
+- hosts: all
+  vars_files:
+  - ../env_variables
+  become: yes
+  tasks:
+    - name: change host name
+      shell: hostnamectl set-hostname {{ inventory_hostname }}
+    - name: Build hosts file
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "{{ hostvars[item]['ansible_default_ipv4']['address'] }} {{item}}"
+        state: present
+      with_items: '{{ groups["all"] }}'
+    - name: install Docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: true
+
+    - name: setup docker daemon 1
+      copy:
+        src: ../docker_config.json
+        dest: /etc/docker/daemon.json
+        owner: admin_petru
+
+    - name: setup docker daemon 2
+      shell: mkdir -p /etc/systemd/system/docker.service.d
+
+    - name:  restart docker
+      shell: |
+        systemctl daemon-reload
+        systemctl restart docker
+
+    - name: install APT Transport HTTPS
+      apt:
+        name: apt-transport-https
+        state: present
+
+    - name: add Kubernetes apt-key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+
+    - name: add Kubernetes' APT repository
+      apt_repository:
+        repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        filename: 'kubernetes'
+
+    - name: install kubelet
+      apt:
+        name: kubelet=1.14.0-00
+        state: present
+        update_cache: true
+
+    - name: install kubeadm
+      apt:
+        name: kubeadm=1.14.0-00
+        state: present
